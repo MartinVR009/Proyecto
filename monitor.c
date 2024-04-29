@@ -1,13 +1,68 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 #include "monitor.h"
 
-void* recolector(void *arg)
-{
+void* recolector(void *arg) {
+    // Obtener el buffer pasado como argumento
+    Buffer *mi_buffer = (Buffer *)arg;
 
+    pipe_fd;
+    char buffer[mi_buffer->TAM]; // Usar el tamaño del buffer pasado como argumento
+
+    // Se abre el pipe nominal
+    pipe_fd = open(mi_buffer->pipe_nominal, O_RDONLY);
+
+    if (pipe_fd == -1) {
+        printf("Error al abrir el pipe\n");
+        perror("open");
+        exit(EXIT_FAILURE);
+    }
+
+    // Se leen las medidas de los sensores
+    while (read(pipe_fd, buffer, mi_buffer->TAM) > 0) {
+        int tipo_sensor;
+        char medida[mi_buffer->TAM]; // Usar el tamaño del buffer
+
+        // Se extrae tipo de sensor y medida del mensaje recibido
+        sscanf(buffer, "%d %s", &tipo_sensor, medida);
+
+        // Se coloca la medida en el buffer correspondiente
+        if (tipo_sensor == 1) { // Temperatura
+            sem_wait(&sem_buffer_temp);
+            strncpy(mi_buffer->buffer, medida, mi_buffer->TAM);
+            mi_buffer->tipo_sensor = tipo_sensor;
+            sem_post(&sem_buffer_temp);
+        } else if (tipo_sensor == 2) { // PH
+            sem_wait(&sem_buffer_ph);
+            strncpy(mi_buffer->buffer, medida, mi_buffer->TAM);
+            mi_buffer->tipo_sensor = tipo_sensor;
+            sem_post(&sem_buffer_ph);
+        } else {
+            printf("Error: Medida recibida con tipo de sensor inválido.\n");
+        }
+    }
+
+    // Cerrar el pipe
+    close(pipe_fd);
+
+    return NULL;
+}
+
+void* ph(void* arg){
+
+}
+void* temperatura(void* arg){
+
+}
+// Función principal
+int main(int argc, char* argv[]) {
     // Declaración de variables para almacenar los parámetros
     int tam_buffer = 0;
-    char* file_temp = NULL;
-    char* file_ph = NULL;
-    char* pipe_nominal = NULL;
+    char* file_temp = "";
+    char* file_ph = "";
+    char* pipe_nominal = "";
 
     // Verificación de la cantidad de argumentos
     if (argc != 9) {
@@ -38,67 +93,10 @@ void* recolector(void *arg)
     }
 
     Buffer *mi_buffer = crear_buffer(tam_buffer);
-    if (mi_buffer == NULL) {
-        printf("Error al crear el buffer.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    char* pipe_nominal = (char*)arg;
-    int pipe_fd;
-    char buffer[TAM];
-
-    // Se abre el pipe nominal
-
-    pipe_fd = open(pipe_nominal, O_RDONLY);
-
-    if (pipe_fd == -1) {
-        printf("Error al abrir el pipe\n");
-        perror("open");
-        exit(EXIT_FAILURE);
-    }
-
-    // Se leen las medidas de los sensores
-
-    while (read(pipe_fd, buffer, TAM) > 0) {
-        int tipo_sensor;
-        char medida[TAM];
-
-        // Se extrae tipo de sensor y medida del mensaje recibido
-
-        sscanf(buffer, "%d %s", &tipo_sensor, medida);
-
-        // Se coloca la medida en el buffer correspondiente
-
-        if (tipo_sensor == 1) { // Temperatura
-
-            sem_wait(&sem_buffer_temp); // Se bloquea el hilo hasta que el semáforo sem_buffer_temp esté disponible
-            strncpy(buffer_temp.buffer, medida, TAM); // Se ccopia la medida recibida del sensor en el buffer de medidas de temperatura
-            buffer_temp.tipo_sensor = tipo_sensor; // Se asigna el tipo de sensor (1 para temperatura)
-            sem_post(&sem_buffer_temp); // Se incrementa el valor del semáforo para que sea usado por otro hilo
-
-        } else if (tipo_sensor == 2) { // PH
-
-            sem_wait(&sem_buffer_ph);
-            strncpy(buffer_ph.buffer, medida, TAM);
-            buffer_ph.tipo_sensor = tipo_sensor;
-            sem_post(&sem_buffer_ph);
-
-        } else {
-            printf("Error: Medida recibida con tipo de sensor inválido.\n");
-        }
-    }
-
-    // Cerrar el pipe
-
-    close(pipe_fd);
     liberar_buffer(mi_buffer);
-    return NULL;
+
+    return 0;
 }
 
-void* ph(void* arg) {
 
-}
 
-void* temperatura(void* arg) {
-
-}

@@ -15,6 +15,14 @@ typedef struct {
     int tipo_sensor;
 } Buffer;
 
+void liberar_buffer(Buffer *buffer) {
+    if (buffer != NULL) {
+        free(buffer->buffer);
+        free(buffer);
+    }
+}
+
+// Función para crear un nuevo buffer
 Buffer* crear_buffer(int TAM) {
     Buffer *nuevo_buffer = malloc(sizeof(Buffer));
     if (nuevo_buffer != NULL) {
@@ -26,13 +34,6 @@ Buffer* crear_buffer(int TAM) {
         }
     }
     return nuevo_buffer;
-}
-
-void liberar_buffer(Buffer *buffer) {
-    if (buffer != NULL) {
-        free(buffer->buffer);
-        free(buffer);
-    }
 }
 
 Buffer buffer_temp, buffer_ph;
